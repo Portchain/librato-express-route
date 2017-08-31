@@ -60,7 +60,6 @@ function Middleware(options) {
     if(queuedMeasurements.length > 0) {
       let measurementsToFlush = queuedMeasurements
       queuedMeasurements = []
-      console.log(JSON.stringify(measurementsToFlush, null, 2))
       //return;
       client.post('/measurements', {
         measurements: measurementsToFlush,
