@@ -1,0 +1,23 @@
+{
+  "name": "librato-express-route",
+  "version": "0.1.0",
+  "description": "Librato middleware for express",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Portchain/librato-express-route.git"
+  },
+  "author": "",
+  "license": "Apache 2.0",
+  "bugs": {
+    "url": "https://github.com/Portchain/librato-express-route/issues"
+  },
+  "homepage": "https://github.com/Portchain/librato-express-route#readme",
+  "dependencies": {
+    "librato-metrics": "0.0.7",
+    "lodash": "4.17.4"
+  }
+}
