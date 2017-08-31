@@ -18,6 +18,7 @@
   "homepage": "https://github.com/Portchain/librato-express-route#readme",
   "dependencies": {
     "librato-metrics": "0.0.7",
-    "lodash": "4.17.4"
+    "lodash": "4.17.4",
+    "stats-lite": "2.1.0"
   }
 }

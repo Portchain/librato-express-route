@@ -1,14 +1,11 @@
 
+const os = require('os')
 const _ = require('lodash')
+const stats = require('stats-lite')
 
-function hrtimeToMs(hrtime) {
-  return hrtime[0]*1000 + hrtime[1]/1000;
-}
 function diffHrtime(a, b) {
   return (a[0] - b[0]) * 1000 + (a[1] - b[1]) / 1000000
 }
-
-const os = require('os')
 
 const GLOBAL_TAGS = {
   host: os.hostname()
@@ -30,37 +27,71 @@ function Middleware(options) {
     token: libratoToken
   });
   
-  var queuedMeasurements = []
+  var queuedMeasurements = {}
+
+  function addMeasurement(key, value) {
+    if(!queuedMeasurements[key]) {
+      queuedMeasurements[key] = {
+        values: []
+      }
+    }
+    queuedMeasurements[key].values.push(value)
+  }
 
   function processMeasurement(req, measurement) {
     setTimeout(() => {
       let pathElements = req.url.split('/')
       let responseTime = diffHrtime(measurement.end, measurement.start)
       let path = ''
-      let tags = _.defaults(req.params, GLOBAL_TAGS)
-      queuedMeasurements.push({
-        name: 'http.response_time_ms',
-        value: responseTime,
-        tags: tags
-      })
+      addMeasurement('http', responseTime)
+      
       pathElements.forEach(pathElement => {
         if(pathElement) {
           path += '.' + pathElement
-          queuedMeasurements.push({
-            name: `http${path}.response_time_ms`,
-            value: responseTime,
-            tags: tags
-          })
+          let key = `http${path}`
+          addMeasurement(key, responseTime)
         }
       })
     })
   }
 
   setInterval(() => {
-    if(queuedMeasurements.length > 0) {
-      let measurementsToFlush = queuedMeasurements
-      queuedMeasurements = []
+      let measurementsToFlush = []
+      for(var key in queuedMeasurements) {
+        measurementsToFlush.push({
+          name: key + '.response_time_mean_ms',
+          value: stats.mean(queuedMeasurements[key].values),
+          tags: GLOBAL_TAGS
+        })
+        measurementsToFlush.push({
+          name: key + '.response_time_median_ms',
+          value: stats.median(queuedMeasurements[key].values),
+          tags: GLOBAL_TAGS
+        })
+        measurementsToFlush.push({
+          name: key + '.response_time_75_percentile_ms',
+          value: stats.percentile(queuedMeasurements[key].values, .75),
+          tags: GLOBAL_TAGS
+        })
+        measurementsToFlush.push({
+          name: key + '.response_time_90_percentile_ms',
+          value: stats.percentile(queuedMeasurements[key].values, .9),
+          tags: GLOBAL_TAGS
+        })
+        measurementsToFlush.push({
+          name: key + '.response_time_95_percentile_ms',
+          value: stats.percentile(queuedMeasurements[key].values, .95),
+          tags: GLOBAL_TAGS
+        })
+        measurementsToFlush.push({
+          name: key + 'response_time_99_percentile_ms',
+          value: stats.percentile(queuedMeasurements[key].values, .99),
+          tags: GLOBAL_TAGS
+        })
+      }
+      queuedMeasurements = {}
       //return;
+    if(measurementsToFlush.length > 0) {
       client.post('/measurements', {
         measurements: measurementsToFlush,
       }, function(response) {
@@ -71,7 +102,7 @@ function Middleware(options) {
         }
       });
     }
-  }, options.flushInterval || 5000)
+  }, options.flushInterval || 10000)
   
   function interceptResponse(req, res, measurement) {
     var oldSend = res.send
